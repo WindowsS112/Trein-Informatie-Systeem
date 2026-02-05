@@ -9,7 +9,7 @@ import random
 import math
 
 # elke keer wanneer we van scherm switchen moet een counter 1 omhoog, zodat bij elke wisseling het weer verandert. Van regen naar sneeuw, van sneeuw naar zonnig enz. met telkens 10 seconden pauze tussen de wisseling.
-weather_code = int(input("Enter the weather type you want: (0: rainy, 1: snowy, 2: cloudy, 3: sunny, 4: misty, 5: night): "))
+weather_code = 0
 
 # --- Config ---
 WIDTH, HEIGHT = 1200, 800
@@ -34,9 +34,76 @@ large_font = pygame.font.SysFont("Arial", 50, bold=True)
 ffmpeg = FFMPEG_helper()
 
 # --- INSTELLINGEN VOOR HET TREIN SYSTEEM ---
-stations = ["Amsterdam", "Utrecht", "Den Bosch", "Eindhoven"]
-huidige_snelheid = 125 # km/u
-volgende_stop = "Utrecht Centraal"
+# --- Trein instellingen ---
+stations = ["Enschede", "Hengelo", "Almelo", "Deventer", "Apeldoorn", "Amersfoort Centraal", "Utrecht Centraal"]
+huidige_snelheid = 125  # km/u
+huidig_station_index = 0
+huidig_station = stations[huidig_station_index]
+volgende_stop = stations[huidig_station_index + 1]
+
+# --- Scherm status ---
+screen_mode = "train"
+route_display_time = 3  # seconden
+route_start_time = None
+
+# --- Weer functies ---
+def get_weather(lat, lon):
+    url = (
+        "https://api.open-meteo.com/v1/forecast"
+        f"?latitude={lat}&longitude={lon}"
+        "&current_weather=true"
+    )
+    response = requests.get(url, timeout=5)
+    response.raise_for_status()
+    return response.json()["current_weather"]
+
+def is_raining(weathercode):
+    return weathercode in (
+        51, 53, 55,
+        61, 63, 65,
+        66, 67,
+        80, 81, 82,
+        95, 96, 99
+    )
+
+# --- Functie om weathercode om te zetten naar tekst ---
+def weather_description(code):
+    mapping = {
+        0: "Helder",                 # Clear sky
+        1: "Grotendeels zonnig",     # Mainly clear
+        2: "Deels bewolkt",          # Partly cloudy
+        3: "Bewolkt",                # Overcast
+        45: "Mist",                  # Fog
+        48: "Damp",                  # Depositing rime fog
+        51: "Lichte motregen",       # Drizzle light
+        53: "Motregen",              # Drizzle moderate
+        55: "Zware motregen",        # Drizzle dense
+        56: "IJzige motregen",       # Freezing drizzle light
+        57: "Zware ijzige motregen", # Freezing drizzle dense
+        61: "Lichte regen",          # Rain light
+        63: "Regen",                 # Rain moderate
+        65: "Zware regen",           # Rain heavy
+        66: "IJzige regen",          # Freezing rain light
+        67: "Zware ijzige regen",    # Freezing rain heavy
+        71: "Lichte sneeuw",         # Snow fall slight
+        73: "Sneeuw",                # Snow fall moderate
+        75: "Zware sneeuw",          # Snow fall heavy
+        77: "Sneeuwkorrels",         # Snow grains
+        80: "Regenbuien",            # Rain showers slight
+        81: "Sterke regenbuien",     # Rain showers moderate
+        82: "Zware regenbuien",      # Rain showers violent
+        85: "Sneeuwbuien",           # Snow showers slight
+        86: "Zware sneeuwbuien",     # Snow showers heavy
+        95: "Onweersbuien",          # Thunderstorm
+        96: "Onweer met lichte hagel", # Thunderstorm with slight hail
+        99: "Onweer met zware hagel"   # Thunderstorm with heavy hail
+    }
+    return mapping.get(code, "Onbekend")
+
+
+# --- Init weer ---
+weather_data = get_weather(LAT, LON)
+last_weather_update = time.time()
 
 
 # Train
@@ -180,7 +247,10 @@ moon_x, moon_y = WIDTH // 3, HEIGHT // 4
 moon_radius = 60
 
 
-for frame_count in range(TOTAL_FRAMES):
+# --- Main loop ---
+frame_count = 0
+running = True
+while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             running = False
@@ -193,74 +263,79 @@ for frame_count in range(TOTAL_FRAMES):
         except Exception as e:
             print("Weer update mislukt:", e)
 
-    # --- Scherm logica ---
     if screen_mode == "train":
+    # --- Scherm logica ---
         progress = frame_count / TOTAL_FRAMES
-    # for i in range(len(track_tiles)):
-    #     track_tiles[i] -= track_speed
+        # for i in range(len(track_tiles)):
+        #     track_tiles[i] -= track_speed
 
-    #     # als tile volledig uit beeld is rechts opnieuw plaatsen
-    #     if track_tiles[i] <= -track_width:
-    #         track_tiles[i] = max(track_tiles) + track_width
+        #     # als tile volledig uit beeld is rechts opnieuw plaatsen
+        #     if track_tiles[i] <= -track_width:
+        #         track_tiles[i] = max(track_tiles) + track_width
         screen.fill(LMS_COLOR)
-    for x in range(0, WIDTH, grass_width):
-        for y in range(TRAIN_HEIGHT - 25, HEIGHT, grass_height):
-            screen.blit(grass_image, (x, y))
+        for x in range(0, WIDTH, grass_width):
+            for y in range(TRAIN_HEIGHT - 25, HEIGHT, grass_height):
+                screen.blit(grass_image, (x, y))
 
 
-        if event.type == pygame.QUIT or event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            pygame.quit()
-            exit()
+            if event.type == pygame.QUIT or event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                exit()
 
-    # 1. BEREKENINGEN
-    # Bereken voortgang (van 0.0 naar 1.0) op basis van het huidige frame
-    progress = frame_count / TOTAL_FRAMES
-    
-    # 2. ACHTERGRONDEN
+        # 1. BEREKENINGEN
+        # Bereken voortgang (van 0.0 naar 1.0) op basis van het huidige frame
+        progress = frame_count / TOTAL_FRAMES
+        
+        # 2. ACHTERGRONDEN
 
-    if weather_code == 0:
-        screen.fill((20, 20, 40)) # rainy
-    
-    elif weather_code == 1:
-        screen.fill((25, 30, 45)) # snowy
+        if weather_code == 0:
+            screen.fill((20, 20, 40)) # rainy
+        
+        elif weather_code == 1:
+            screen.fill((25, 30, 45)) # snowy
 
-    elif weather_code == 2:
-        screen.fill((180, 180, 180)) # cloudy
+        elif weather_code == 2:
+            screen.fill((180, 180, 180)) # cloudy
 
-    elif weather_code == 3:
-        screen.fill((135, 206, 235)) # sunny
+        elif weather_code == 3:
+            screen.fill((135, 206, 235)) # sunny
 
-    elif weather_code == 4:
-        screen.fill((200, 200, 200)) # misty
+        elif weather_code == 4:
+            screen.fill((200, 200, 200)) # misty
 
-    elif weather_code == 5:
-        screen.fill((10, 10, 40)) # night
-            
-    # 3. INTERFACE ELEMENTEN (HET 'NEXT STOP' SCHERM)
-    # Teken de rails
-    for x in track_tiles:
-        screen.blit(track_image, (x, track_y))
-    
-    # Teken stations
-    screen.blit(station_image, (left_station_x, station_y))
-    screen.blit(station_image, (right_station_x, station_y))
+        elif weather_code == 5:
+            screen.fill((10, 10, 40)) # night
 
-    # Teken de trein (tijdelijk een rood blok totdat je je pixel art inlaadt)
-    # De trein beweegt van links naar rechts over de breedte van het scherm
-    gif_frame_index = int((frame_count / FPS) * gif_fps) % train_frame_count
-    train_image = train_frames[gif_frame_index]
-    train_x = (WIDTH - TRAIN_SIZE[0]) * progress
-    train_y = TRAIN_HEIGHT - 80
-    screen.blit(train_image, (train_x, train_y))
+        for x in range(0, WIDTH, grass_width):
+            for y in range(TRAIN_HEIGHT - 25, HEIGHT, grass_height):
+                screen.blit(grass_image, (x, y))
+                
+        # 3. INTERFACE ELEMENTEN (HET 'NEXT STOP' SCHERM)
+        # Teken de rails
+        for x in track_tiles:
+            screen.blit(track_image, (x, track_y))
+        
+        # Teken stations
+        screen.blit(station_image, (left_station_x, station_y))
+        screen.blit(station_image, (right_station_x, station_y))
 
-    # Teken tekst informatie
-    stop_label = large_font.render(f"Volgende stop: {volgende_stop}", True, (255, 255, 255))
-    speed_label = font.render(f"Huidige snelheid: {huidige_snelheid} km/u", True, (255, 255, 255))
-    eta_label = font.render(f"ETA: 4 min", True, (255, 255, 255))
-    
-    screen.blit(stop_label, (50, 50))
-    screen.blit(speed_label, (50, 110))
-    screen.blit(eta_label, (50, 150))
+        # Teken de trein (tijdelijk een rood blok totdat je je pixel art inlaadt)
+        # De trein beweegt van links naar rechts over de breedte van het scherm
+        gif_frame_index = int((frame_count / FPS) * gif_fps) % train_frame_count
+        train_image = train_frames[gif_frame_index]
+        train_x = (WIDTH - TRAIN_SIZE[0]) * progress
+        train_y = TRAIN_HEIGHT - 80
+        screen.blit(train_image, (train_x, train_y))
+
+        # --- Tekst informatie ---
+        stop_label = large_font.render(f"Volgende stop: {volgende_stop}", True, (255, 255, 255))
+        current_station_label = large_font.render(f"Huidig station: {huidig_station}", True, (255, 255, 255))
+        speed_label = font.render(f"Huidige snelheid: {huidige_snelheid} km/u", True, (255, 255, 255))
+
+        screen.blit(current_station_label, (50, 40))
+        screen.blit(stop_label, (50, 100))
+        screen.blit(speed_label, (50, 160))
+
 
         # --- Voortgangsbalk ---
         bar_width = 400
@@ -274,8 +349,8 @@ for frame_count in range(TOTAL_FRAMES):
         clock_label = font.render(current_time, True, (0, 0, 0))
         padding = 10
         bg_rect = pygame.Rect(WIDTH - clock_label.get_width() - padding*2 - 20, 20,
-                              clock_label.get_width() + padding*2,
-                              clock_label.get_height() + padding*2)
+                            clock_label.get_width() + padding*2,
+                            clock_label.get_height() + padding*2)
         pygame.draw.rect(screen, (255, 255, 255), bg_rect, border_radius=6)
         screen.blit(clock_label, (bg_rect.x + padding, bg_rect.y + padding))
 
@@ -286,9 +361,9 @@ for frame_count in range(TOTAL_FRAMES):
         weather_label = font.render(f"Weer: {weather_text} ({temp}°C)", True, (255, 255, 255))
         screen.blit(weather_label, (50, HEIGHT - 50))
 
-
         # --- Station aankomst check ---
         if progress >= 1.0:
+            weather_code += 1
             if huidig_station_index >= len(stations) - 2:
                 running = False  # laatste station bereikt, afsluiten
             else:
@@ -338,6 +413,16 @@ for frame_count in range(TOTAL_FRAMES):
                               clock_label.get_height() + padding*2)
         pygame.draw.rect(screen, (255, 255, 255), bg_rect, border_radius=6)
         screen.blit(clock_label, (bg_rect.x + padding, bg_rect.y + padding))
+
+        # Na korte tijd terug naar trein animatie en update stations
+        if time.time() - route_start_time > route_display_time:
+            weather_code += 1
+            screen_mode = "train"
+            frame_count = 0
+            if huidig_station_index < len(stations) - 2:
+                huidig_station_index += 1
+                huidig_station = stations[huidig_station_index]
+                volgende_stop = stations[huidig_station_index + 1]
 
     # rainy
     if weather_code == 0:
@@ -443,15 +528,6 @@ for frame_count in range(TOTAL_FRAMES):
         weather_label = font.render(f"Weer: {weather_text} ({temp}°C)", True, (255, 255, 255))
         screen.blit(weather_label, (50, HEIGHT - 50))
 
-
-        # Na korte tijd terug naar trein animatie en update stations
-        if time.time() - route_start_time > route_display_time:
-            screen_mode = "train"
-            frame_count = 0
-            if huidig_station_index < len(stations) - 2:
-                huidig_station_index += 1
-                huidig_station = stations[huidig_station_index]
-                volgende_stop = stations[huidig_station_index + 1]
 
     # --- Render & capture ---
     pygame.display.flip()

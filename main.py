@@ -15,6 +15,8 @@ pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
+# Test
+
 # Fonts voor de informatie
 font = pygame.font.SysFont("Arial", 30)
 large_font = pygame.font.SysFont("Arial", 50, bold=True)

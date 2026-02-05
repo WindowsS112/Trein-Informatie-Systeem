@@ -30,7 +30,7 @@ class FFMPEG_helper():
         screen = pygame.display.get_surface()
         if not screen:
             raise RuntimeError("You must initialize pygame first")
-        
+            
         width, height = screen.get_size()
         ffmpeg_cmd = [
             "ffmpeg",

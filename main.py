@@ -38,6 +38,23 @@ station_y = 500 - station_height - 5
 left_station_x = 20
 right_station_x = WIDTH - station_width - 20
 
+# Track
+TRACK_PATH = os.path.join("Pictures", "track.png")
+track_image = pygame.image.load(TRACK_PATH).convert_alpha()
+
+track_width = track_image.get_width()
+track_height = track_image.get_height()
+
+track_y = 500
+
+num_tracks = (WIDTH // track_width) + 3
+track_tiles = []
+for i in range(num_tracks):
+    track_tiles.append(i * track_width)
+
+track_speed = 8  # pixels per frame
+
+
 for frame_count in range(TOTAL_FRAMES):
     for event in pygame.event.get():
         if event.type == pygame.QUIT or event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -47,13 +64,20 @@ for frame_count in range(TOTAL_FRAMES):
     # 1. BEREKENINGEN
     # Bereken voortgang (van 0.0 naar 1.0) op basis van het huidige frame
     progress = frame_count / TOTAL_FRAMES
+    # for i in range(len(track_tiles)):
+    #     track_tiles[i] -= track_speed
+
+    #     # als tile volledig uit beeld is rechts opnieuw plaatsen
+    #     if track_tiles[i] <= -track_width:
+    #         track_tiles[i] = max(track_tiles) + track_width
     
     # 2. ACHTERGROND TEKENEN
     screen.fill(LMS_COLOR)
 
     # 3. INTERFACE ELEMENTEN (HET 'NEXT STOP' SCHERM)
     # Teken de rails
-    pygame.draw.rect(screen, (80, 80, 80), (0, 500, WIDTH, 20))
+    for x in track_tiles:
+        screen.blit(track_image, (x, track_y))
     
     # Teken de trein (tijdelijk een rood blok totdat je je pixel art inlaadt)
     # De trein beweegt van links naar rechts over de breedte van het scherm

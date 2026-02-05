@@ -1,6 +1,7 @@
 import pygame
 from ffmpeg_helper import FFMPEG_helper
 from datetime import datetime
+import os
 
 
 WIDTH, HEIGHT = 1200, 800
@@ -25,6 +26,18 @@ stations = ["Amsterdam", "Utrecht", "Den Bosch", "Eindhoven"]
 huidige_snelheid = 125 # km/u
 volgende_stop = "Utrecht Centraal"
 
+# Station
+STATION_PATH = os.path.join("Pictures", "station.png")
+station_image = pygame.image.load(STATION_PATH).convert_alpha()
+station_image = pygame.transform.scale(station_image, (160, 120))
+
+station_width = station_image.get_width()
+station_height = station_image.get_height()
+
+station_y = 500 - station_height - 5
+left_station_x = 20
+right_station_x = WIDTH - station_width - 20
+
 for frame_count in range(TOTAL_FRAMES):
     for event in pygame.event.get():
         if event.type == pygame.QUIT or event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -48,6 +61,10 @@ for frame_count in range(TOTAL_FRAMES):
     train_x = (WIDTH - train_width) * progress
     pygame.draw.rect(screen, (220, 20, 60), (train_x, 420, train_width, 80), border_radius=10)
     
+    # Teken stations
+    screen.blit(station_image, (left_station_x, station_y))
+    screen.blit(station_image, (right_station_x, station_y))
+
     # Teken tekst informatie
     stop_label = large_font.render(f"Volgende stop: {volgende_stop}", True, (255, 255, 255))
     speed_label = font.render(f"Huidige snelheid: {huidige_snelheid} km/u", True, (255, 255, 255))

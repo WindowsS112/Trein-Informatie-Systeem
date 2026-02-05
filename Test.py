@@ -10,6 +10,7 @@ FPS = 24
 DURATION_SECONDS = 5
 TOTAL_FRAMES = FPS * DURATION_SECONDS
 LMS_COLOR = (0, 158, 132)  # Achtergrond
+ETA_TOTAAL_SECONDEN = 4 * 60
 
 # --- Weer instellingen ---
 LAT, LON = 52.22, 6.89  # Enschede
@@ -84,13 +85,20 @@ for frame_count in range(TOTAL_FRAMES):
     pygame.draw.rect(screen, (220, 20, 60), (train_x, 420, train_width, 80), border_radius=10)
 
     # --- Tekst informatie ---
+    # Huidig station / Volgende stop / Snelheid / ETA
     stop_label = large_font.render(f"Volgende stop: {volgende_stop}", True, (255, 255, 255))
     current_station_label = large_font.render(f"Huidig station: {huidig_station}", True, (255, 255, 255))
     speed_label = font.render(f"Huidige snelheid: {huidige_snelheid} km/u", True, (255, 255, 255))
 
+    resterende_seconden = int(ETA_TOTAAL_SECONDEN * (1 - progress))
+    minuten = resterende_seconden // 60
+    seconden = resterende_seconden % 60
+    eta_label = font.render(f"ETA: {minuten}:{seconden:02d}", True, (255, 255, 255))
+
     screen.blit(current_station_label, (50, 40))
     screen.blit(stop_label, (50, 100))
     screen.blit(speed_label, (50, 160))
+    screen.blit(eta_label, (50, 200))
 
     # --- Voortgangsbalk ---
     bar_width = 400
@@ -124,8 +132,8 @@ for frame_count in range(TOTAL_FRAMES):
     weather_label = font.render(f"Weer: {weather_text} ({temp}°C)", True, (255, 255, 255))
     screen.blit(weather_label, (50, HEIGHT - 50))
 
-    # --- Station automatisch wisselen op progressie ---
-    if progress >= 1.0:
+    # --- Station automatisch wisselen ---
+    if resterende_seconden <= 0:
         if huidig_station_index < len(stations) - 2:
             huidig_station_index += 1
             huidig_station = stations[huidig_station_index]

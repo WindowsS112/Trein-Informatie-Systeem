@@ -1,5 +1,7 @@
 import pygame
 from ffmpeg_helper import FFMPEG_helper
+from datetime import datetime
+
 
 WIDTH, HEIGHT = 1200, 800
 FPS = 24
@@ -20,7 +22,7 @@ ffmpeg = FFMPEG_helper()
 
 # --- INSTELLINGEN VOOR HET TREIN SYSTEEM ---
 stations = ["Amsterdam", "Utrecht", "Den Bosch", "Eindhoven"]
-huidige_snelheid = 124 # km/u
+huidige_snelheid = 125 # km/u
 volgende_stop = "Utrecht Centraal"
 
 for frame_count in range(TOTAL_FRAMES):
@@ -60,10 +62,26 @@ for frame_count in range(TOTAL_FRAMES):
     pygame.draw.rect(screen, (255, 255, 255), (WIDTH//2 - bar_width//2, 700, bar_width, 10))
     pygame.draw.circle(screen, (255, 215, 0), (int(WIDTH//2 - bar_width//2 + (bar_width * progress)), 705), 15)
 
+    # Digitale klok (rechtsboven)
+    current_time = datetime.now().strftime("%H:%M:%S")
+    clock_label = font.render(current_time, True, (0, 0, 0))  # zwarte tekst
+
+    padding = 10
+    bg_rect = pygame.Rect(
+        WIDTH - clock_label.get_width() - padding*2 - 20,
+        20,
+        clock_label.get_width() + padding*2,
+        clock_label.get_height() + padding*2
+    )
+
+    pygame.draw.rect(screen, (255, 255, 255), bg_rect, border_radius=6)
+    screen.blit(clock_label, (bg_rect.x + padding, bg_rect.y + padding))
+
     # Render en capture
     pygame.display.flip()
     ffmpeg.capture_frame()
     clock.tick(FPS)
+
 
 del ffmpeg
 pygame.quit()

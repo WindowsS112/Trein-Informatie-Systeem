@@ -60,7 +60,7 @@ volgende_stop = stations[huidig_station_index + 1]
 
 # --- Scherm status ---
 screen_mode = "train"
-route_display_time = 3  # seconden
+route_display_time = 7  # seconden
 route_start_time = None
 
 
@@ -75,7 +75,7 @@ def get_weather(lat, lon):
     response.raise_for_status()
     return response.json()["current_weather"]
 
-# <<<<<<< HEAD
+
 def draw_texture_overlay(surface, width, height, type="dots"):
     """
     Tekent een subtiel patroon over een surface heen voor een technische look.
@@ -104,13 +104,14 @@ def draw_texture_overlay(surface, width, height, type="dots"):
 
 
 def is_raining(weathercode):
-    return weathercode in (
+    return weathercode in {
         51, 53, 55,
         61, 63, 65,
         66, 67,
         80, 81, 82,
         95, 96, 99
-    )
+    }
+
 
 def map_openmeteo_to_scene(code):
     """
@@ -124,23 +125,23 @@ def map_openmeteo_to_scene(code):
     """
 
     # Regen
-    if code in (51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99):
+    if code in {51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99}:
         return 0
 
     # Sneeuw
-    if code in (71, 73, 75, 77, 85, 86):
+    if code in {71, 73, 75, 77, 85, 86}:
         return 1
 
     # Mist
-    if code in (45, 48):
+    if code in {45, 48}:
         return 4
 
     # Bewolkt
-    if code in (2, 3):
+    if code in {2, 3}:
         return 2
 
     # Helder / zonnig
-    if code in (0, 1):
+    if code in {0, 1}:
         return 3
 
     # Fallback
@@ -182,7 +183,28 @@ def weather_description(code):
     return mapping.get(code, "Onbekend")
 
 # --- Real weather switch ---
+
+
 HARDCODED_WEATHER_SEQUENCE = [0, 1, 2, 3, 4, 5]
+
+HARDCODED_WEATHER_TEMPS = {
+    0: 8,    # Regen
+    1: -2,   # Sneeuw
+    2: 6,   # Bewolkt
+    3: 22,   # Zonnig
+    4: 6,    # Mist
+    5: 4    # Nacht
+}
+
+HARDCODED_WEATHER_TEXT = {
+    0: "Regen",
+    1: "Sneeuw",
+    2: "Bewolkt",
+    3: "Zonnig",
+    4: "Mist",
+    5: "Nacht"
+}
+
 hardcoded_weather_index = 0
 
 use_real_weather = True
@@ -193,6 +215,9 @@ weather_data = get_weather(LAT, LON)
 last_weather_update = time.time()
 
 weather_code = map_openmeteo_to_scene(weather_data["weathercode"])
+display_temperature = weather_data["temperature"]
+
+display_weather_text = weather_description(weather_data["weathercode"])
 
 
 # Train
@@ -226,6 +251,14 @@ train_frames = load_gif(GIF_PATH, scale=TRAIN_SIZE)
 train_frame_count = len(train_frames)
 gif_fps = 16
 
+train_width = 175
+train_height = 56
+GIF_PATH2 = os.path.join("Pictures", "train.gif")
+TRAIN_SIZE2 = (train_width, train_height)
+
+train_frames2 = load_gif(GIF_PATH2, scale=TRAIN_SIZE2)
+train_frame_count2 = len(train_frames2)
+
 
 # Station
 STATION_PATH = os.path.join("Pictures", "station.png")
@@ -255,7 +288,10 @@ track_tiles = []
 for i in range(num_tracks):
     track_tiles.append(i * track_width)
 
-track_speed = 3  # pixels per frame
+scroll_x = 0
+SCROLL_SPEED = 8
+
+track_speed = 8  # pixels per frame
 
 # Grass
 GRASS_PATH = os.path.join("Pictures", "grass.webp")
@@ -393,9 +429,8 @@ while running:
         except Exception as e:
             print("Weer update mislukt:", e)
 
-
     if screen_mode == "train":
-    # --- Scherm logica ---
+        # --- Scherm logica ---
         progress = frame_count / TOTAL_FRAMES
 
         if event.type == pygame.QUIT or event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -430,7 +465,6 @@ while running:
         screen.blit(stop_label, (50, 100))
         screen.blit(speed_label, (50, 160))
 
-    ## --- IN JE GAME LOOP ---
         # --- IN JE GAME LOOP ---
         now = datetime.now()
 
@@ -451,17 +485,25 @@ while running:
         time_rect = time_surf.get_rect(center=bg_rect.center)
         screen.blit(time_surf, time_rect)
 
-        # DEZE REGEL MOET WEG (veroorzaakte de fout):
-        # screen.blit(bg_surface, (x_pos, y_pos))  <-- VERWIJDEREN
+        # --- Weer links onder ---
+        weather_text = display_weather_text
+        temp = display_temperature
+        weather_label = font.render(f"Weer: {weather_text} ({temp}°C)", True, (255, 255, 255))
+        screen.blit(weather_label, (50, HEIGHT - 50))
+
         # --- Station aankomst check ---
         if progress >= 1.0:
             if use_real_weather:
+                display_temperature = weather_data["temperature"]
+                display_weather_text = weather_description(weather_data["weathercode"])
                 use_real_weather = False
                 hardcoded_weather_index = 0
             else:
                 hardcoded_weather_index = (hardcoded_weather_index + 1) % len(HARDCODED_WEATHER_SEQUENCE)
 
             weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
+            display_temperature = HARDCODED_WEATHER_TEMPS[weather_code]
+            display_weather_text = HARDCODED_WEATHER_TEXT[weather_code]
 
             if huidig_station_index >= len(stations) - 2:
                 running = False  # laatste station bereikt, afsluiten
@@ -473,6 +515,30 @@ while running:
     elif screen_mode == "route":
         set_background(weather_code)
 
+        # Teken lijn voor de route
+        margin = 100
+        line_y = TRAIN_HEIGHT
+
+        # Teken bewegende stations
+        scroll_x -= SCROLL_SPEED
+        n = len(stations)
+        spacing = 250
+        for i, station in enumerate(stations):
+            x = margin + 2 * spacing + i * spacing + scroll_x
+
+            if x < -50 or x > WIDTH + 50:
+                continue
+
+            color = (255, 215, 0) if i == huidig_station_index else (255, 255, 255)
+            pygame.draw.circle(screen, (255, 255, 255), (int(x), line_y), 20)
+            pygame.draw.circle(screen, (0, 0, 0), (int(x), line_y), 15)
+
+            # Afwisselend boven/onder
+            y = line_y - 200 if i % 2 == 0 else line_y - 125
+            label = font.render(station, True, color)
+            screen.blit(label, (int(x - label.get_width() / 2), y))
+
+        # Teken track
         for i in range(len(track_tiles)):
             track_tiles[i] -= track_speed
 
@@ -481,56 +547,31 @@ while running:
                 track_tiles[i] = max(track_tiles) + track_width
         draw_rails(track_tiles)
 
-        # Teken lijn voor de route
-        margin = 100
-        line_y = TRAIN_HEIGHT
-        # pygame.draw.line(screen, (255, 255, 255), (margin, line_y), (WIDTH - margin, line_y), 5)
-
-        # Teken stations afwisselend boven/onder
-        n = len(stations)
-        spacing = (WIDTH - 2*margin) / (n - 1)
-        for i, station in enumerate(stations):
-            x = margin + i * spacing
-            # kleur van label
-            color = (255, 215, 0) if i == huidig_station_index else (255, 255, 255)
-            pygame.draw.circle(screen, (255, 255, 255), (int(x), line_y), 15)
-
-            # Afwisselend boven/onder
-            y = line_y - 60 if i % 2 == 0 else line_y + 15
-            label = font.render(station, True, color)
-            screen.blit(label, (int(x - label.get_width()/2), y))
-
         # --- Geanimeerde trein positie tussen huidige en volgende station ---
         if huidig_station_index < len(stations) - 1:
             progress_route = frame_count / TOTAL_FRAMES
-            start_x = margin + huidig_station_index * spacing
-            end_x = margin + (huidig_station_index + 1) * spacing
+            start_x = margin + 2 * spacing + huidig_station_index * spacing + scroll_x
+            end_x = margin + 2 * spacing - 50 + (huidig_station_index + 1) * spacing + scroll_x
             train_x = start_x + (end_x - start_x) * progress_route
         else:
             train_x = margin + huidig_station_index * spacing  # laatste station
 
-        pygame.draw.circle(screen, (255, 215, 0), (int(train_x), line_y), 10)
+        gif_frame_index = int((frame_count / FPS) * gif_fps) % train_frame_count2
+        train_image = train_frames2[gif_frame_index]
+        screen.blit(train_image, (train_x - train_width, line_y - train_height))
 
-        # --- SETUP (bovenin je code, na pygame.init) ---
-        # We gebruiken 'menlo' (Mac) of 'consolas' (Windows) voor vaste cijferbreedtes
-
-        # --- IN JE GAME LOOP ---
         dutch_days = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"]
         dutch_months = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
 
-               # --- SETUP (bovenin je code, na pygame.init) ---
-        # We gebruiken 'menlo' (Mac) of 'consolas' (Windows) voor vaste cijferbreedtes
-
-      # --- IN JE GAME LOOP ---
         now = datetime.now()
 
         # 1. Tijd string maken en renderen
         time_str = now.strftime("%H:%M:%S")
-        time_surf = time_font.render(time_str, True, (255, 255, 255)) 
+        time_surf = time_font.render(time_str, True, (255, 255, 255))
 
         # 2. Positie van de achtergrond bepalen (Rechtsboven)
         bg_rect = clock_bg.get_rect()
-        bg_rect.topright = (WIDTH - 20, 20) 
+        bg_rect.topright = (WIDTH - 20, 20)
 
         # 3. Tekenen
         # A. Eerst de achtergrond (de PNG)
@@ -546,8 +587,17 @@ while running:
                 hardcoded_weather_index = (hardcoded_weather_index + 1) % len(HARDCODED_WEATHER_SEQUENCE)
                 weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
 
+        # Na korte tijd terug naar trein animatie en update stations
+        if time.time() - route_start_time > route_display_time:
+            if not use_real_weather:
+                hardcoded_weather_index = (hardcoded_weather_index + 1) % len(HARDCODED_WEATHER_SEQUENCE)
+                weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
+                display_temperature = HARDCODED_WEATHER_TEMPS[weather_code]
+                display_weather_text = HARDCODED_WEATHER_TEXT[weather_code]
+
             screen_mode = "train"
             frame_count = 0
+            scroll_x = 0
             if huidig_station_index < len(stations) - 2:
                 huidig_station_index += 1
                 huidig_station = stations[huidig_station_index]
@@ -651,12 +701,10 @@ while running:
             pygame.draw.circle(screen, (255, 255, 150), (x, y), radius)
                 
         # Weer links onder blijft
-        temp = weather_data["temperature"]
-        code = weather_data["weathercode"]
-        weather_text = weather_description(code)
+        weather_text = display_weather_text
+        temp = display_temperature
         weather_label = font.render(f"Weer: {weather_text} ({temp}°C)", True, (255, 255, 255))
         screen.blit(weather_label, (50, HEIGHT - 50))
-
 
     # --- Render & capture ---
     pygame.display.flip()

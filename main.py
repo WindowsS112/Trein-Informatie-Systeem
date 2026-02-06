@@ -585,6 +585,14 @@ while running:
             if not use_real_weather:
                 hardcoded_weather_index = (hardcoded_weather_index + 1) % len(HARDCODED_WEATHER_SEQUENCE)
                 weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
+        
+        weather_label = font.render(
+            f"Weer: {display_weather_text} ({display_temperature}°C)",
+            True,
+            (255, 255, 255)
+        )
+        screen.blit(weather_label, (50, HEIGHT - 50))
+
 
         # Na korte tijd terug naar trein animatie en update stations
         if time.time() - route_start_time > route_display_time:
@@ -698,12 +706,7 @@ while running:
             x, y, base_radius = star
             radius = base_radius + random.choice([0, 0, 1])
             pygame.draw.circle(screen, (255, 255, 150), (x, y), radius)
-                
-        # Weer links onder blijft
-        weather_text = display_weather_text
-        temp = display_temperature
-        weather_label = font.render(f"Weer: {weather_text} ({temp}°C)", True, (255, 255, 255))
-        screen.blit(weather_label, (50, HEIGHT - 50))
+
 
     # --- Render & capture ---
     pygame.display.flip()

@@ -41,7 +41,7 @@ volgende_stop = stations[huidig_station_index + 1]
 
 # --- Scherm status ---
 screen_mode = "train"
-route_display_time = 3  # seconden
+route_display_time = 5  # seconden
 route_start_time = None
 
 
@@ -468,7 +468,6 @@ while running:
         # Teken lijn voor de route
         margin = 100
         line_y = TRAIN_HEIGHT
-        # pygame.draw.line(screen, (255, 255, 255), (margin, line_y), (WIDTH - margin, line_y), 5)
 
         # Teken stations afwisselend boven/onder
         n = len(stations)

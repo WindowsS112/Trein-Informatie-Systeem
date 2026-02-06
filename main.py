@@ -58,7 +58,7 @@ def get_weather(lat, lon):
     response.raise_for_status()
     return response.json()["current_weather"]
 
-<<<<<<< HEAD
+# <<<<<<< HEAD
 
 def is_raining(weathercode):
     return weathercode in (
@@ -68,7 +68,7 @@ def is_raining(weathercode):
         80, 81, 82,
         95, 96, 99
     )
-=======
+
 def map_openmeteo_to_scene(code):
     """
     Zet Open-Meteo weathercode om naar interne weather_code:
@@ -102,7 +102,6 @@ def map_openmeteo_to_scene(code):
 
     # Fallback
     return 2
->>>>>>> The-Weather-Branch
 
 
 # --- Functie om weathercode om te zetten naar tekst ---
@@ -415,11 +414,6 @@ while running:
 
         # --- Station aankomst check ---
         if progress >= 1.0:
-<<<<<<< HEAD
-            weather_code += 1
-            if weather_code > 5:
-                weather_code = 0
-=======
             if use_real_weather:
                 use_real_weather = False
                 hardcoded_weather_index = 0
@@ -428,7 +422,6 @@ while running:
 
             weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
 
->>>>>>> The-Weather-Branch
             if huidig_station_index >= len(stations) - 2:
                 running = False  # laatste station bereikt, afsluiten
             else:
@@ -489,15 +482,10 @@ while running:
 
         # Na korte tijd terug naar trein animatie en update stations
         if time.time() - route_start_time > route_display_time:
-<<<<<<< HEAD
-            weather_code += 1
-            if weather_code > 5:
-                weather_code = 0
-=======
             if not use_real_weather:
                 hardcoded_weather_index = (hardcoded_weather_index + 1) % len(HARDCODED_WEATHER_SEQUENCE)
                 weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
->>>>>>> The-Weather-Branch
+
             screen_mode = "train"
             frame_count = 0
             if huidig_station_index < len(stations) - 2:

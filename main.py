@@ -388,6 +388,16 @@ def set_background(weather_code):
 
     elif weather_code == 5:
         screen.fill((10, 10, 40)) # night
+        pygame.draw.circle(screen, (255, 255, 200), (moon_x, moon_y), moon_radius)
+        glow_radius = 100
+        moon_glow = pygame.Surface((glow_radius*2, glow_radius*2), pygame.SRCALPHA)
+        pygame.draw.circle(moon_glow, (255, 255, 200, 60), (glow_radius, glow_radius), glow_radius)
+        screen.blit(moon_glow, (moon_x - glow_radius, moon_y - glow_radius))
+
+        for star in stars:
+            x, y, base_radius = star
+            radius = base_radius + random.choice([0, 0, 1])
+            pygame.draw.circle(screen, (255, 255, 150), (x, y), radius)
 
     for x in range(0, WIDTH, grass_width):
         for y in range(TRAIN_HEIGHT - 25, HEIGHT, grass_height):
@@ -455,6 +465,17 @@ while running:
         draw_train(progress)
 
         # --- Tekst en interface ---
+        shadow = 2
+        stop_label_shadow = large_font.render(f"Volgende stop: {volgende_stop}", True, (0, 0, 0, 0.5))
+        current_station_label_shadow = large_font.render(f"Huidig station: {huidig_station}", True, (0, 0, 0, 0.5))
+        speed_label_shadow = font.render(f"Huidige snelheid: {huidige_snelheid} km/u", True, (0, 0, 0.5))
+        screen.blit(current_station_label_shadow, (50 - shadow, 40 - shadow))
+        screen.blit(stop_label_shadow, (50 - shadow, 100 - shadow))
+        screen.blit(speed_label_shadow, (50 - shadow, 160 - shadow))
+        screen.blit(current_station_label_shadow, (50 + shadow, 40 + shadow))
+        screen.blit(stop_label_shadow, (50 + shadow, 100 + shadow))
+        screen.blit(speed_label_shadow, (50 + shadow, 160 + shadow))
+
         stop_label = large_font.render(f"Volgende stop: {volgende_stop}", True, (255, 255, 255))
         current_station_label = large_font.render(f"Huidig station: {huidig_station}", True, (255, 255, 255))
         speed_label = font.render(f"Huidige snelheid: {huidige_snelheid} km/u", True, (255, 255, 255))
@@ -688,17 +709,6 @@ while running:
 
     # night
     elif weather_code == 5:
-        pygame.draw.circle(screen, (255, 255, 200), (moon_x, moon_y), moon_radius)
-        glow_radius = 100
-        moon_glow = pygame.Surface((glow_radius*2, glow_radius*2), pygame.SRCALPHA)
-        pygame.draw.circle(moon_glow, (255, 255, 200, 60), (glow_radius, glow_radius), glow_radius)
-        screen.blit(moon_glow, (moon_x - glow_radius, moon_y - glow_radius))
-
-        for star in stars:
-            x, y, base_radius = star
-            radius = base_radius + random.choice([0, 0, 1])
-            pygame.draw.circle(screen, (255, 255, 150), (x, y), radius)
-                
         # Weer links onder blijft
         weather_text = display_weather_text
         temp = display_temperature

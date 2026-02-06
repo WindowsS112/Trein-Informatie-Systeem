@@ -9,7 +9,7 @@ import random
 import math
 
 # elke keer wanneer we van scherm switchen moet een counter 1 omhoog, zodat bij elke wisseling het weer verandert. Van regen naar sneeuw, van sneeuw naar zonnig enz. met telkens 10 seconden pauze tussen de wisseling.
-weather_code = 0
+
 
 # --- Config ---
 WIDTH, HEIGHT = 1200, 800
@@ -57,14 +57,39 @@ def get_weather(lat, lon):
     response.raise_for_status()
     return response.json()["current_weather"]
 
-def is_raining(weathercode):
-    return weathercode in (
-        51, 53, 55,
-        61, 63, 65,
-        66, 67,
-        80, 81, 82,
-        95, 96, 99
-    )
+def map_openmeteo_to_scene(code):
+    """
+    Zet Open-Meteo weathercode om naar interne weather_code:
+    0 = regen
+    1 = sneeuw
+    2 = bewolkt
+    3 = zonnig
+    4 = mist
+    5 = nacht (optioneel, tijd-gestuurd)
+    """
+
+    # Regen
+    if code in (51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99):
+        return 0
+
+    # Sneeuw
+    if code in (71, 73, 75, 77, 85, 86):
+        return 1
+
+    # Mist
+    if code in (45, 48):
+        return 4
+
+    # Bewolkt
+    if code in (2, 3):
+        return 2
+
+    # Helder / zonnig
+    if code in (0, 1):
+        return 3
+
+    # Fallback
+    return 2
 
 # --- Functie om weathercode om te zetten naar tekst ---
 def weather_description(code):
@@ -100,10 +125,18 @@ def weather_description(code):
     }
     return mapping.get(code, "Onbekend")
 
+# --- Real weather switch ---
+HARDCODED_WEATHER_SEQUENCE = [0, 1, 2, 3, 4, 5]
+hardcoded_weather_index = 0
+
+use_real_weather = True
+
 
 # --- Init weer ---
 weather_data = get_weather(LAT, LON)
 last_weather_update = time.time()
+
+weather_code = map_openmeteo_to_scene(weather_data["weathercode"])
 
 
 # Train
@@ -260,8 +293,14 @@ while running:
         try:
             weather_data = get_weather(LAT, LON)
             last_weather_update = time.time()
+
+            # ⬇️ KOPPELING TUSSEN API EN ACHTERGROND
+            api_code = weather_data["weathercode"]
+            weather_code = map_openmeteo_to_scene(api_code)
+
         except Exception as e:
             print("Weer update mislukt:", e)
+
 
     if screen_mode == "train":
     # --- Scherm logica ---
@@ -363,7 +402,14 @@ while running:
 
         # --- Station aankomst check ---
         if progress >= 1.0:
-            weather_code += 1
+            if use_real_weather:
+                use_real_weather = False
+                hardcoded_weather_index = 0
+            else:
+                hardcoded_weather_index = (hardcoded_weather_index + 1) % len(HARDCODED_WEATHER_SEQUENCE)
+
+            weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
+
             if huidig_station_index >= len(stations) - 2:
                 running = False  # laatste station bereikt, afsluiten
             else:
@@ -416,7 +462,9 @@ while running:
 
         # Na korte tijd terug naar trein animatie en update stations
         if time.time() - route_start_time > route_display_time:
-            weather_code += 1
+            if not use_real_weather:
+                hardcoded_weather_index = (hardcoded_weather_index + 1) % len(HARDCODED_WEATHER_SEQUENCE)
+                weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
             screen_mode = "train"
             frame_count = 0
             if huidig_station_index < len(stations) - 2:

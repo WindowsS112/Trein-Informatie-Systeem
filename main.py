@@ -8,8 +8,6 @@ import os
 import random
 import math
 
-# elke keer wanneer we van scherm switchen moet een counter 1 omhoog, zodat bij elke wisseling het weer verandert. Van regen naar sneeuw, van sneeuw naar zonnig enz. met telkens 10 seconden pauze tussen de wisseling.
-
 
 # --- Config ---
 WIDTH, HEIGHT = 1200, 800
@@ -139,7 +137,28 @@ def weather_description(code):
     return mapping.get(code, "Onbekend")
 
 # --- Real weather switch ---
+
+
 HARDCODED_WEATHER_SEQUENCE = [0, 1, 2, 3, 4, 5]
+
+HARDCODED_WEATHER_TEMPS = {
+    0: 8,    # Regen
+    1: -2,   # Sneeuw
+    2: 12,   # Bewolkt
+    3: 22,   # Zonnig
+    4: 6,    # Mist
+    5: 10    # Nacht
+}
+
+HARDCODED_WEATHER_TEXT = {
+    0: "Regen",
+    1: "Sneeuw",
+    2: "Bewolkt",
+    3: "Zonnig",
+    4: "Mist",
+    5: "Nacht"
+}
+
 hardcoded_weather_index = 0
 
 use_real_weather = True
@@ -150,6 +169,9 @@ weather_data = get_weather(LAT, LON)
 last_weather_update = time.time()
 
 weather_code = map_openmeteo_to_scene(weather_data["weathercode"])
+display_temperature = weather_data["temperature"]
+
+display_weather_text = weather_description(weather_data["weathercode"])
 
 
 # Train
@@ -406,21 +428,26 @@ while running:
         screen.blit(clock_label, (bg_rect.x + padding, bg_rect.y + padding))
 
         # --- Weer links onder ---
-        temp = weather_data["temperature"]
-        code = weather_data["weathercode"]
-        weather_text = weather_description(code)
+        weather_text = display_weather_text
+        temp = display_temperature
         weather_label = font.render(f"Weer: {weather_text} ({temp}°C)", True, (255, 255, 255))
         screen.blit(weather_label, (50, HEIGHT - 50))
 
         # --- Station aankomst check ---
         if progress >= 1.0:
             if use_real_weather:
+                display_temperature = weather_data["temperature"]
+                display_weather_text = weather_description(weather_data["weathercode"])
                 use_real_weather = False
                 hardcoded_weather_index = 0
             else:
                 hardcoded_weather_index = (hardcoded_weather_index + 1) % len(HARDCODED_WEATHER_SEQUENCE)
 
             weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
+            display_temperature = HARDCODED_WEATHER_TEMPS[weather_code]
+            display_weather_text = HARDCODED_WEATHER_TEXT[weather_code]
+
+
 
             if huidig_station_index >= len(stations) - 2:
                 running = False  # laatste station bereikt, afsluiten
@@ -485,6 +512,8 @@ while running:
             if not use_real_weather:
                 hardcoded_weather_index = (hardcoded_weather_index + 1) % len(HARDCODED_WEATHER_SEQUENCE)
                 weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
+                display_temperature = HARDCODED_WEATHER_TEMPS[weather_code]
+                display_weather_text = HARDCODED_WEATHER_TEXT[weather_code]
 
             screen_mode = "train"
             frame_count = 0
@@ -591,12 +620,10 @@ while running:
             pygame.draw.circle(screen, (255, 255, 150), (x, y), radius)
                 
         # Weer links onder blijft
-        temp = weather_data["temperature"]
-        code = weather_data["weathercode"]
-        weather_text = weather_description(code)
+        weather_text = display_weather_text
+        temp = display_temperature
         weather_label = font.render(f"Weer: {weather_text} ({temp}°C)", True, (255, 255, 255))
         screen.blit(weather_label, (50, HEIGHT - 50))
-
 
     # --- Render & capture ---
     pygame.display.flip()

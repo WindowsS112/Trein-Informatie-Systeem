@@ -58,14 +58,16 @@ def get_weather(lat, lon):
 
 # <<<<<<< HEAD
 
+
 def is_raining(weathercode):
-    return weathercode in (
+    return weathercode in {
         51, 53, 55,
         61, 63, 65,
         66, 67,
         80, 81, 82,
         95, 96, 99
-    )
+    }
+
 
 def map_openmeteo_to_scene(code):
     """
@@ -79,23 +81,23 @@ def map_openmeteo_to_scene(code):
     """
 
     # Regen
-    if code in (51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99):
+    if code in {51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99}:
         return 0
 
     # Sneeuw
-    if code in (71, 73, 75, 77, 85, 86):
+    if code in {71, 73, 75, 77, 85, 86}:
         return 1
 
     # Mist
-    if code in (45, 48):
+    if code in {45, 48}:
         return 4
 
     # Bewolkt
-    if code in (2, 3):
+    if code in {2, 3}:
         return 2
 
     # Helder / zonnig
-    if code in (0, 1):
+    if code in {0, 1}:
         return 3
 
     # Fallback
@@ -144,10 +146,10 @@ HARDCODED_WEATHER_SEQUENCE = [0, 1, 2, 3, 4, 5]
 HARDCODED_WEATHER_TEMPS = {
     0: 8,    # Regen
     1: -2,   # Sneeuw
-    2: 12,   # Bewolkt
+    2: 6,   # Bewolkt
     3: 22,   # Zonnig
     4: 6,    # Mist
-    5: 10    # Nacht
+    5: 4    # Nacht
 }
 
 HARDCODED_WEATHER_TEXT = {
@@ -372,9 +374,8 @@ while running:
         except Exception as e:
             print("Weer update mislukt:", e)
 
-
     if screen_mode == "train":
-    # --- Scherm logica ---
+        # --- Scherm logica ---
         progress = frame_count / TOTAL_FRAMES
 
         if event.type == pygame.QUIT or event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -408,7 +409,6 @@ while running:
         screen.blit(current_station_label, (50, 40))
         screen.blit(stop_label, (50, 100))
         screen.blit(speed_label, (50, 160))
-
 
         # --- Voortgangsbalk ---
         bar_width = 400
@@ -446,8 +446,6 @@ while running:
             weather_code = HARDCODED_WEATHER_SEQUENCE[hardcoded_weather_index]
             display_temperature = HARDCODED_WEATHER_TEMPS[weather_code]
             display_weather_text = HARDCODED_WEATHER_TEXT[weather_code]
-
-
 
             if huidig_station_index >= len(stations) - 2:
                 running = False  # laatste station bereikt, afsluiten
